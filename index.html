@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no" />
+<title>Whisky Coloring — Amber Palette (CIEDE2000 + 21 Colors)</title>
+<style>
+:root { --btn-tap-scale: .96; }
+html, body {
+  height: 100%; margin: 0; font-family:'Noto Sans JP', sans-serif;
+  color: #fff; text-align: center; overflow: hidden;
+  background: radial-gradient(circle at center,#5a2b08 0%,#2b1a09 70%,#100502 100%);
+  animation: glowShift 24s ease-in-out infinite; transition: background 3s ease;
+}
+@keyframes glowShift {
+  0%{background-color:#1a0a04}
+  25%{background-color:#8c4b08}
+  50%{background-color:#e0a240}
+  75%{background-color:#9c3c06}
+  100%{background-color:#1a0a04}
+}
+#amberVerticalBar{position:fixed;top:0;left:0;width:100vw;height:100vh;display:flex;flex-direction:column;z-index:1002;
+box-shadow:0 8px 28px rgba(255,200,130,0.25);transition:transform .6s ease-in-out;overflow-y:auto;cursor:pointer;
+border-radius:16px;transform:translateX(0);}
+#amberVerticalBar.compact{transform:translateX(-92vw);pointer-events:auto;opacity:.95;
+box-shadow:6px 0 14px rgba(0,0,0,0.3);}
+#amberVerticalBar .segment{flex:1;display:flex;align-items:center;justify-content:center;}
+#amberVerticalBar .segment span{font-size:.75rem;color:#fff;text-align:center;mix-blend-mode:difference;}
+button{
+  font-size:clamp(1.1rem,4vw,1.4rem);
+  padding:14px 28px;
+  border:none;
+  border-radius:40px;
+  color:#fff;
+  font-weight:700;
+  cursor:pointer;
+  z-index:1001;
+  transition:transform .15s ease;
+}
+button:active{transform:scale(var(--btn-tap-scale));}
+#cameraBtn{
+  position:fixed;bottom:120px;left:50%;transform:translateX(-50%);
+  background:linear-gradient(145deg,#d4a760,#b87900);
+  box-shadow:0 0 14px rgba(255,204,102,.7);
+}
+#exitBtn{
+  position:fixed;bottom:40px;left:50%;transform:translateX(-50%);
+  background:linear-gradient(145deg,#b04,#600);
+  box-shadow:0 0 14px rgba(255,100,100,.7);
+}
+#resultBar{position:fixed;bottom:180px;left:0;width:100%;background:rgba(255,255,255,.25);
+color:#fff;font-weight:600;padding:14px 0;line-height:1.4;font-size:clamp(1.1rem,4vw,1.4rem);
+z-index:1000;backdrop-filter:blur(6px);}
+.hidden{display:none!important;}
+#video{
+  position:fixed;inset:0;width:100%;height:100%;object-fit:cover;
+  z-index:0;background:#000;
+}
+#target{position:fixed;top:50%;left:50%;width:80px;height:80px;border-radius:50%;
+transform:translate(-50%,-50%);z-index:998;pointer-events:none;
+background:radial-gradient(circle at center,rgba(255,215,160,0.0)40%,rgba(255,195,120,0.35)70%,rgba(255,175,80,0.55)100%);
+box-shadow:0 0 14px rgba(255,190,120,0.3);opacity:0;transition:opacity 1.2s ease;}
+#target.active{opacity:1;}
+#target.flash{animation:amberPulse .6s ease-out;}
+@keyframes amberPulse{0%{box-shadow:0 0 20px rgba(255,220,150,0.9);transform:translate(-50%,-50%) scale(1.1);}
+50%{box-shadow:0 0 28px rgba(255,230,170,0.8);transform:translate(-50%,-50%) scale(1.2);}
+100%{box-shadow:0 0 14px rgba(255,190,120,0.3);transform:translate(-50%,-50%) scale(1);}
+}
+</style>
+</head>
+<body>
+
+<video id="video" autoplay playsinline webkit-playsinline muted class="hidden"></video>
+<canvas id="canvas" class="hidden"></canvas>
+<div id="target"></div>
+
+<div id="amberVerticalBar">
+  <div class="segment" style="background:#fffef5;"><span>Gin Clear<br>ジン・クリア</span></div>
+  <div class="segment" style="background:#faf5e0;"><span>White Wine<br>白ワイン</span></div>
+  <div class="segment" style="background:#f9efb9;"><span>Pale Straw<br>淡い麦わら色</span></div>
+  <div class="segment" style="background:#f6e086;"><span>Pale Gold<br>淡い金色</span></div>
+  <div class="segment" style="background:#f1c94e;"><span>Corn<br>トウモロコシ色</span></div>
+  <div class="segment" style="background:#e4b22f;"><span>Yellow Gold<br>黄金色</span></div>
+  <div class="segment" style="background:#c79425;"><span>Old Gold<br>オールドゴールド</span></div>
+  <div class="segment" style="background:#a86b17;"><span>Amber<br>琥珀色</span></div>
+  <div class="segment" style="background:#94640f;"><span>Deep Gold<br>深い金色</span></div>
+  <div class="segment" style="background:#864b0a;"><span>Sherry<br>シェリー</span></div>
+  <div class="segment" style="background:#733b05;"><span>Deep Copper<br>深い銅色</span></div>
+  <div class="segment" style="background:#633306;"><span>Burnished<br>磨かれた色</span></div>
+  <div class="segment" style="background:#532907;"><span>Oloroso Sherry<br>オロロソシェリー</span></div>
+  <div class="segment" style="background:#452106;"><span>Chestnut Muscat<br>マスカット栗色</span></div>
+  <div class="segment" style="background:#391b05;"><span>Gold Brown<br>金茶色</span></div>
+  <div class="segment" style="background:#301505;"><span>Polished Mahogany<br>磨かれたマホガニー</span></div>
+  <div class="segment" style="background:#271104;"><span>Mahogany<br>マホガニー</span></div>
+  <div class="segment" style="background:#1f0d03;"><span>Brown Chocolate<br>茶色のチョコレート</span></div>
+  <div class="segment" style="background:#170903;"><span>Old Cask<br>古樽色</span></div>
+  <div class="segment" style="background:#0f0502;"><span>Brown Sherry<br>茶色のシェリー</span></div>
+  <div class="segment" style="background:#070200;"><span>Black<br>黒</span></div>
+</div>
+
+<div id="resultBar">Detected Color: —<br><span style="font-size:1rem;opacity:.9;">判定結果：—</span></div>
+<button id="cameraBtn">🎨 判定する</button>
+<button id="exitBtn">🛑 終了</button>
+
+<script>
+const video=document.getElementById('video');
+const canvas=document.getElementById('canvas');
+const ctx=canvas.getContext('2d');
+const bar=document.getElementById('amberVerticalBar');
+const cameraBtn=document.getElementById('cameraBtn');
+const exitBtn=document.getElementById('exitBtn');
+const result=document.getElementById('resultBar');
+const target=document.getElementById('target');
+let stream=null,streaming=false;
+
+async function startCamera(){
+  try{
+    const s=await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"},audio:false});
+    stream=s; video.srcObject=s;
+    video.classList.remove('hidden');
+    await video.play();
+    return true;
+  }catch(e){
+    alert('カメラにアクセスできません。ブラウザの設定でカメラを許可してください。');
+    return false;
+  }
+}
+function stopCamera(){
+  if(stream){stream.getTracks().forEach(t=>t.stop());}
+  video.classList.add('hidden');
+}
+
+function rgbToHex(r,g,b){return'#'+[r,g,b].map(x=>x.toString(16).padStart(2,'0')).join('');}
+function hexToRgb(hex){const v=hex.match(/\w\w/g).map(x=>parseInt(x,16));return{r:v[0],g:v[1],b:v[2]};}
+function rgbToLab(r,g,b){r/=255;g/=255;b/=255;
+r=(r>0.04045)?Math.pow((r+0.055)/1.055,2.4):r/12.92;
+g=(g>0.04045)?Math.pow((g+0.055)/1.055,2.4):g/12.92;
+b=(b>0.04045)?Math.pow((b+0.055)/1.055,2.4):b/12.92;
+const X=(r*0.4124+g*0.3576+b*0.1805)/0.95047,Y=(r*0.2126+g*0.7152+b*0.0722)/1.0,Z=(r*0.0193+g*0.1192+b*0.9505)/1.08883;
+const f=t=>(t>0.008856)?Math.cbrt(t):(7.787*t)+(16/116);return{L:(116*f(Y))-16,a:500*(f(X)-f(Y)),b:200*(f(Y)-f(Z))};}
+function deltaE00(l1,l2){const avgL=(l1.L+l2.L)/2,C1=Math.hypot(l1.a,l1.b),C2=Math.hypot(l2.a,l2.b);
+const avgC=(C1+C2)/2,G=0.5*(1-Math.sqrt(Math.pow(avgC,7)/(Math.pow(avgC,7)+Math.pow(25,7))));
+const a1p=l1.a*(1+G),a2p=l2.a*(1+G),C1p=Math.hypot(a1p,l1.b),C2p=Math.hypot(a2p,l2.b);
+const avgCp=(C1p+C2p)/2,h1p=(Math.atan2(l1.b,a1p)*180/Math.PI+360)%360,h2p=(Math.atan2(l2.b,a2p)*180/Math.PI+360)%360;
+let dhp=h2p-h1p;if(Math.abs(dhp)>180)dhp+=(dhp>0?-360:360);
+const dLp=l2.L-l1.L,dCp=C2p-C1p,dHp=2*Math.sqrt(C1p*C2p)*Math.sin((dhp/2)*Math.PI/180);
+const avgHp=(Math.abs(h1p-h2p)>180)?(h1p+h2p+360)/2:(h1p+h2p)/2;
+const T=1-0.17*Math.cos((avgHp-30)*Math.PI/180)+0.24*Math.cos(2*avgHp*Math.PI/180)
++0.32*Math.cos((3*avgHp+6)*Math.PI/180)-0.20*Math.cos((4*avgHp-63)*Math.PI/180);
+const SL=1+((0.015*Math.pow((avgL-50),2))/Math.sqrt(20+Math.pow((avgL-50),2)));
+const SC=1+0.045*avgCp,SH=1+0.015*avgCp*T;
+const deltaTheta=30*Math.exp(-Math.pow(((avgHp-275)/25),2));
+const RC=2*Math.sqrt(Math.pow(avgCp,7)/(Math.pow(avgCp,7)+Math.pow(25,7)));
+const RT=-RC*Math.sin(2*deltaTheta*Math.PI/180);
+return Math.sqrt(Math.pow((dLp/SL),2)+Math.pow((dCp/SC),2)+Math.pow((dHp/SH),2)+RT*(dCp/SC)*(dHp/SH));}
+const AMBER_21=[{name:"Gin Clear",jp:"ジン・クリア",hex:"#fffef5"},{name:"White Wine",jp:"白ワイン",hex:"#faf5e0"},
+{name:"Pale Straw",jp:"淡い麦わら色",hex:"#f9efb9"},{name:"Pale Gold",jp:"淡い金色",hex:"#f6e086"},
+{name:"Corn",jp:"トウモロコシ色",hex:"#f1c94e"},{name:"Yellow Gold",jp:"黄金色",hex:"#e4b22f"},
+{name:"Old Gold",jp:"オールドゴールド",hex:"#c79425"},{name:"Amber",jp:"琥珀色",hex:"#a86b17"},
+{name:"Deep Gold",jp:"深い金色",hex:"#94640f"},{name:"Sherry",jp:"シェリー",hex:"#864b0a"},
+{name:"Deep Copper",jp:"深い銅色",hex:"#733b05"},{name:"Burnished",jp:"磨かれた色",hex:"#633306"},
+{name:"Oloroso Sherry",jp:"オロロソシェリー",hex:"#532907"},{name:"Chestnut Muscat",jp:"マスカット栗色",hex:"#452106"},
+{name:"Gold Brown",jp:"金茶色",hex:"#391b05"},{name:"Polished Mahogany",jp:"磨かれたマホガニー",hex:"#301505"},
+{name:"Mahogany",jp:"マホガニー",hex:"#271104"},{name:"Brown Chocolate",jp:"茶色のチョコレート",hex:"#1f0d03"},
+{name:"Old Cask",jp:"古樽色",hex:"#170903"},{name:"Brown Sherry",jp:"茶色のシェリー",hex:"#0f0502"},
+{name:"Black",jp:"黒",hex:"#070200"}];
+function getNearestAmberCIEDE2000(hex){const s=hexToRgb(hex);const sLab=rgbToLab(s.r,s.g,s.b);
+let best=AMBER_21[0],bestDist=Infinity;for(const c of AMBER_21){const t=hexToRgb(c.hex);const tLab=rgbToLab(t.r,t.g,t.b);
+const d=deltaE00(sLab,tLab);if(d<bestDist){bestDist=d;best=c;}}return best;}
+
+cameraBtn.addEventListener('click',async()=>{
+  if(!streaming){
+    bar.classList.add('compact');
+    const ok=await startCamera();
+    if(ok){streaming=true;cameraBtn.textContent='🎨 判定する';target.classList.add('active');}
+  }else{
+    canvas.width=video.videoWidth||1;canvas.height=video.videoHeight||1;
+    ctx.drawImage(video,0,0);
+    const d=ctx.getImageData(Math.floor(canvas.width/2),Math.floor(canvas.height/2),1,1).data;
+    const hex=rgbToHex(d[0],d[1],d[2]);
+    const nearest=getNearestAmberCIEDE2000(hex);
+    result.innerHTML=`Detected Color: ${nearest.name} (${nearest.hex})<br><span style="font-size:1rem;opacity:.9;">判定結果：${nearest.jp}</span>`;
+    document.body.style.animation='none';
+    document.body.style.background=`radial-gradient(circle at center, ${nearest.hex} 0%, #120802 75%, #0a0402 100%)`;
+    target.classList.add('flash'); setTimeout(()=>target.classList.remove('flash'),600);
+    stopCamera(); streaming=false; cameraBtn.textContent='📷 再スタート';
+  }
+});
+
+exitBtn.addEventListener('click',()=>{
+  stopCamera();
+  streaming=false;
+  bar.classList.remove('compact');
+  result.innerHTML='Detected Color: —<br><span style="font-size:1rem;opacity:.9;">判定結果：—</span>';
+  document.body.style.background='radial-gradient(circle at center,#5a2b08 0%,#2b1a09 70%,#100502 100%)';
+  document.body.style.animation='glowShift 24s ease-in-out infinite';
+  target.classList.remove('active','flash');
+  cameraBtn.textContent='🎨 判定する';
+});
+bar.addEventListener('click',()=>bar.classList.toggle('compact'));
+</script>
+</body>
+</html>
+
