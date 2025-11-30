@@ -189,15 +189,18 @@ let stream=null;
 /* カメラ起動 */
 async function startCamera(){
   try{
-    stream=await navigator.mediaDevices.getUserMedia({
-      video:{facingMode:"environment"},
-      audio:false
+    // 背面カメラを要求
+    stream=await navigator.mediaDevices.getUserMedia({ 
+      video:{facingMode:"environment"}, 
+      audio:false 
     });
     video.srcObject=stream;
     video.classList.remove('hidden');
     await video.play();
-    target.classList.add('active');
-    bar.classList.add('compact');
+    // ターゲットマークを表示
+    target.classList.add('active'); 
+    // カラーバーを非表示にする
+    bar.classList.add('compact'); 
   }catch(e){
     alert('カメラにアクセスできません。ブラウザで許可してください。');
   }
