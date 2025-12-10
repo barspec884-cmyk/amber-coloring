@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ja">
 <head>
 <meta charset="UTF-8" />
@@ -59,7 +59,6 @@ html, body {
   text-align: center;
   mix-blend-mode: difference;
 }
-
 /* ボタン */
 button {
   font-size:clamp(1.1rem,4vw,1.4rem);
@@ -80,7 +79,7 @@ button:active{transform:scale(var(--btn-tap-scale));}
   box-shadow:0 0 14px rgba(255,100,100,.7);
 }
 
-/* 🎯 結果バー（最初は非表示） */
+/* 🎯 結果バー */
 #resultBar {
   position: fixed;
   top: 32px;
@@ -107,6 +106,45 @@ button:active{transform:scale(var(--btn-tap-scale));}
 #resultBar.show {
   opacity: 1;
   pointer-events: auto;
+}
+
+/* ▼ 測定オーバーレイ */
+#measuringOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.25); /* 薄い暗幕 */
+  z-index: 6000;
+  display: flex;
+  justify-content: center;
+  flex-direction: column;
+  align-items: center;
+  color: #ffd89e;
+  font-weight: 700;
+  font-size: 1.2rem;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .25s ease;
+}
+
+#measuringOverlay.show {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* ▼ プログレスバー */
+#progressBar {
+  width: 60%;
+  height: 6px;
+  border-radius: 6px;
+  background: rgba(255,255,255,0.2);
+  margin-top: 12px;
+  overflow: hidden;
+}
+#progressFill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg,#ffcc88,#d89736);
+  transition: width .1s linear;
 }
 
 .hidden{display:none!important;}
@@ -172,6 +210,15 @@ button:active{transform:scale(var(--btn-tap-scale));}
 
 <div id="resultBar">—</div>
 
+<div id="measuringOverlay">
+  <div>色を測定しています...</div>
+  <div style="margin-top:6px;font-size:1rem;opacity:.85;">
+    カメラを中央で保持してください
+  </div>
+  <div id="progressBar">
+    <div id="progressFill"></div>
+  </div>
+</div>
 <button id="cameraBtn">📷 カメラ起動／判定</button>
 <button id="exitBtn">🛑 終了</button>
 <img id="glass" src="glass.png" alt="Whisky Glass">
@@ -184,6 +231,9 @@ const exitBtn=document.getElementById('exitBtn');
 const result=document.getElementById('resultBar');
 const target=document.getElementById('target');
 const bar=document.getElementById('amberVerticalBar');
+const overlay = document.getElementById('measuringOverlay');
+const progressFill = document.getElementById('progressFill');
+
 let stream=null;
 
 /* カメラ起動 */
@@ -212,35 +262,88 @@ function stopCamera(){
   stream=null;
   video.classList.add('hidden');
   target.classList.remove('active');
-  result.classList.remove('show'); // 結果バーを隠す
+  result.classList.remove('show'); 
+  overlay.classList.remove('show');
+  document.body.style.animation='glowShift 24s ease-in-out infinite'; 
 }
 
-/* 判定処理 */
-function detectColor(){
+/* 判定処理 (高度な複数フレーム・複数ピクセル平均化) */
+async function detectColor(){
   if(!stream){
     alert('カメラを起動してください。');
     return;
   }
   if(!video.videoWidth) return;
 
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
-  ctx.drawImage(video,0,0);
+  // 1. オーバーレイを表示
+  overlay.classList.add("show");
+  progressFill.style.width = "0%";
 
-  const x = Math.floor(canvas.width/2);
-  const y = Math.floor(canvas.height/2);
-  const d = ctx.getImageData(x,y,1,1).data;
+  // 2. 露出安定待機 (300ms)
+  await new Promise(res => setTimeout(res, 300));
 
-  const hex = rgbToHex(d[0],d[1],d[2]);
+  const frameCount = 15;
+  const sampleSize = 30;
+  const sampleFrames = [];
+
+  // 3. 複数フレームのサンプリング、ノイズ除去、平均化
+  for(let i=0; i<frameCount; i++){
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    ctx.drawImage(video, 0, 0);
+
+    const sx = Math.floor(canvas.width / 2 - sampleSize/2);
+    const sy = Math.floor(canvas.height / 2 - sampleSize/2);
+    const data = ctx.getImageData(sx, sy, sampleSize, sampleSize).data;
+
+    let r=0,g=0,b=0,count=0;
+    for(let j=0;j<data.length;j+=4){
+      const nr=data[j], ng=data[j+1], nb=data[j+2];
+      // ハイライト (250以上) とシャドー (8以下) を除外
+      if(nr<250 && ng<250 && nb<250 && nr>8 && ng>8 && nb>8){
+        r+=nr; g+=ng; b+=nb; count++;
+      }
+    }
+
+    if(count>0) sampleFrames.push({r:r/count,g:g/count,b:b/count});
+
+    // 4. プログレスバーの更新と待機 (演出)
+    progressFill.style.width = `${Math.round(((i+1)/frameCount)*100)}%`;
+    await new Promise(res => setTimeout(res, 50));
+  }
+
+  // 5. 測定完了後、オーバーレイを非表示に
+  overlay.classList.remove("show");
+
+  if (sampleFrames.length === 0) {
+      result.innerHTML = `<div>エラー</div><div style="font-size:1rem;">有効な色データを取得できませんでした。</div>`;
+      result.classList.add('show');
+      return;
+  }
+  
+  // 6. 全フレームの平均を計算し、最終的なRGBを決定
+  const sum = sampleFrames.reduce((acc,c)=>({
+    r:acc.r+c.r, g:acc.g+c.g, b:acc.b+c.b
+  }),{r:0,g:0,b:0});
+
+  const len = sampleFrames.length;
+  const finalRGB = {
+    r:Math.round(sum.r/len),
+    g:Math.round(sum.g/len),
+    b:Math.round(sum.b/len)
+  };
+
+  // 7. CIEDE2000による判定
+  const hex = rgbToHex(finalRGB.r, finalRGB.g, finalRGB.b);
   const nearest = getNearestAmberCIEDE2000(hex);
 
+  // 8. 結果表示と演出の実行
   result.innerHTML = `
     <div style="font-size:1.1rem;opacity:.85;">Detected Color</div>
     <div style="margin-top:4px;font-size:1.5rem;font-weight:900;">
       <span style="
         background:rgba(255,255,255,0.15);
-        padding:4px 12px;
-        border-radius:999px;
+        padding:4px 12px;border-radius:999px;
         border:1px solid rgba(255,255,255,0.35);
         display:inline-block;
       ">${nearest.name}</span>
@@ -251,7 +354,6 @@ function detectColor(){
   `;
 
   result.classList.add('show');
-
   document.body.style.animation='none';
   document.body.style.background=
     `radial-gradient(circle at center, ${nearest.hex} 0%, #120802 75%, #0a0402 100%)`;
@@ -260,15 +362,27 @@ function detectColor(){
   setTimeout(()=>target.classList.remove('flash'),600);
 }
 
-/* ボタン */
+/* ボタンとUI操作 */
 cameraBtn.addEventListener('click',()=>{
   if(!stream) startCamera();
   else detectColor();
 });
 exitBtn.addEventListener('click',stopCamera);
-bar.addEventListener('click',()=>bar.classList.toggle('compact'));
 
-/* 色変換 */
+/* バータップ — 判定中(show中)は開かない */
+bar.addEventListener('click',()=>{
+  if (!overlay.classList.contains("show")) {
+    bar.classList.toggle('compact');
+  }
+});
+
+/* オーバーレイタップ — バーを強制的に隠す */
+overlay.addEventListener('click', () => {
+  bar.classList.add('compact');
+});
+
+
+/* 色変換関数 */
 function rgbToHex(r,g,b){
   return '#'+[r,g,b].map(x=>x.toString(16).padStart(2,'0')).join('');
 }
@@ -294,7 +408,7 @@ function rgbToLab(r,g,b){
   };
 }
 
-/* ΔE 2000 */
+/* ΔE 2000 (CIEDE2000) */
 function deltaE00(l1,l2){
   const avgL=(l1.L+l2.L)/2;
   const C1=Math.hypot(l1.a,l1.b);
@@ -341,7 +455,7 @@ function deltaE00(l1,l2){
   );
 }
 
-/* Amber 21 */
+/* Amber 21 パレット */
 const AMBER_21=[
   {name:'Gin Clear',jp:'ジン・クリア',hex:'#fffef5'},
   {name:'White Wine',jp:'白ワイン',hex:'#faf5e0'},
